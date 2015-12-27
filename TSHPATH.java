@@ -3,11 +3,9 @@ package djsktra;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.NoSuchElementException;
-import java.util.Queue;
-import java.util.Iterator;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 class IndexMinPQ<Key extends Comparable<Key>> implements Iterable<Integer> {
@@ -32,7 +30,7 @@ class IndexMinPQ<Key extends Comparable<Key>> implements Iterable<Integer> {
     }
 
     public boolean contains(int i) {
-        if (i < 0 || i >= maxN) throw new IndexOutOfBoundsException();
+        if (i < 0 || i >= maxN){ throw new IndexOutOfBoundsException();}
         return qp[i] != -1;
     }
 
@@ -60,8 +58,9 @@ class IndexMinPQ<Key extends Comparable<Key>> implements Iterable<Integer> {
     public void decreaseKey(int i, Key key) {
         if (i < 0 || i >= maxN) throw new IndexOutOfBoundsException();
         if (!contains(i)) throw new NoSuchElementException("index is not in the priority queue");
-        if (keys[i].compareTo(key) <= 0)
-            throw new IllegalArgumentException("Calling decreaseKey() with given argument would not strictly decrease the key");
+        if (keys[i].compareTo(key) <= 0){
+        	throw new IllegalArgumentException("Calling decreaseKey() with given argument would not strictly decrease the key");
+        }
         keys[i] = key;
         swim(qp[i]);
     }
@@ -128,21 +127,22 @@ class IndexMinPQ<Key extends Comparable<Key>> implements Iterable<Integer> {
 }
 
 
-class DirectedEdge{
-	private final int v,w;
-	private final int weight;
+
+class Edge{
+	final int v,w;
+	final int weight;
 	
-	public DirectedEdge(int v, int w, int weight){
+	public Edge(int v, int w, int weight){
 		this.v = v;
 		this.w = w;
 		this.weight = weight;
 	}
 	
-	public int from(){
+	public int v(){
 		return this.v;
 	}
 	
-	public int to(){ 
+	public int w(){ 
 		return this.w;
 	}
 	
@@ -206,71 +206,68 @@ class Bag<Item> implements Iterable<Item> {
 }
 
 
-class EdgeWeightedDiGraph{
+class EdgeWeightedGraph{
 	public final int V;
-	public final Bag<DirectedEdge>[] adj;
+	public final Bag<Edge>[] adj;
 	
-	public EdgeWeightedDiGraph(int V){
+	public EdgeWeightedGraph(int V){
 		this.V = V;
-		adj = (Bag<DirectedEdge>[]) new Bag[V];
+		adj = (Bag<Edge>[]) new Bag[V];
 		for(int i=0;i<V;i++){
-			adj[i] = new Bag<DirectedEdge>();
+			adj[i] = new Bag<Edge>();
 		}
 	}
 	
-	public void addEdge(DirectedEdge e){
-		adj[e.from()].add(e);
+	public void addEdge(Edge e, int v){
+		adj[e.v()].add(e);
 	}
 	
-	public Iterable<DirectedEdge> adj(int v){
+	public Iterable<Edge> adj(int v){
 		return adj[v];
 	}
 }
 
-
-public class djkstra {
-	private DirectedEdge[] edgeTo;
+public class djkstra{
+	private Edge[] edgeTo;
 	private int[] distTo;
-	private IndexMinPQ<Integer> pq;
+	private IndexMinPQ<Integer> h;
 	
-	public djkstra(EdgeWeightedDiGraph G, int s){
-		edgeTo = new DirectedEdge[G.V];
+	public djkstra(EdgeWeightedGraph G, int s){
+		edgeTo = new Edge[G.V];
 		distTo = new int[G.V];
-
-		pq = (IndexMinPQ<Integer>) new IndexMinPQ<Integer>(G.V);
+		h = new IndexMinPQ<Integer>(G.V);
 		
 		for(int i=0;i<G.V;i++){
 			distTo[i] = Integer.MAX_VALUE;
 		}
 		distTo[s] = 0;
 		
-		((IndexMinPQ<Integer>) pq).insert(s,0);
-		while(!pq.isEmpty()){
-
-			int v = ((IndexMinPQ<Integer>) pq).delMin();
-			for(DirectedEdge e: G.adj(v)){
-				relax(e);
+		h.insert(s,0);
+		while(!h.isEmpty()){
+			int v = h.delMin();
+			for(Edge e: G.adj(v)){
+				relax(e,v);
 			}
 		}
 	}
 	
-	private void relax(DirectedEdge e){
-		int v = e.from();
-		int w = e.to();
+	private void relax(Edge e,int v){
+		int w = e.v();
+		if(w==v){
+			w = e.w();
+		}
 		if(distTo[w] > distTo[v] + e.weight()){
 			distTo[w] = distTo[v] + e.weight();
 			edgeTo[w] = e;
-			if(pq.contains(w)){
-
-				((IndexMinPQ<Integer>) pq).decreaseKey(w,distTo[w]);
+			if(h.contains(w)){
+				h.decreaseKey(w,distTo[w]);
 			}
 			else{
-				((IndexMinPQ<Integer>) pq).insert(w,distTo[w]);
+				h.insert(w,distTo[w]);
 			}
 		}
 	}	
 
-	
 	public static void main(String[] args) throws NumberFormatException, IOException{
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 		String[] s = new String[2];
@@ -279,36 +276,39 @@ public class djkstra {
 		int t = Integer.parseInt(in.readLine());
 		int V, E;
 		int v,w,weight;
+		String city;
 		
 		while(t-->0){
-			s = in.readLine().split(" ");
-			V = Integer.parseInt(s[0]);
-			E = Integer.parseInt(s[1]);
+			Map<String,Integer> names = new HashMap<String,Integer>();
+			V = Integer.parseInt(in.readLine());
 			
-			EdgeWeightedDiGraph G = new EdgeWeightedDiGraph(V);
-			for(int i=0;i<E;i++){
-				str = in.readLine().split(" ");
-				v = Integer.parseInt(str[0])-1;
-				w = Integer.parseInt(str[1])-1;
-				weight = Integer.parseInt(str[2]);
-				DirectedEdge e = new DirectedEdge(v,w,weight);
-				G.addEdge(e);
+			EdgeWeightedGraph G = new EdgeWeightedGraph(V);
+			for(int i=0;i<V;i++){
+				city = in.readLine();
+				names.put(city, i);
+				
+				E = Integer.parseInt(in.readLine());
+				while(E-->0){
+					s = in.readLine().split(" ");
+					w = Integer.parseInt(s[0])-1;
+					weight = Integer.parseInt(s[1]);
+					Edge e = new Edge(i,w,weight);
+					G.addEdge(e, i);
+				}
 			}
 			
-			s = in.readLine().split(" ");
-			v = Integer.parseInt(s[0])-1;
-			w = Integer.parseInt(s[1])-1;
-			djkstra x = new djkstra(G,v);
-			if(x.distTo[w]!=Integer.MAX_VALUE){
+			int n = Integer.parseInt(in.readLine());
+			while(n-->0){
+				s = in.readLine().split(" ");
+				v = names.get(s[0]);
+				w = names.get(s[1]);
+				
+				djkstra x = new djkstra(G,v);				
 				System.out.println(x.distTo[w]);
 			}
-			else{
-				System.out.println("NO");
-			}
+			in.readLine();
 		}
 		
 	}
 
 }
-
-
