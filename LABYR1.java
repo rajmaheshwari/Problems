@@ -1,5 +1,3 @@
-package codechefmain;
-
 import java.io.*;
 import java.util.*;
 
